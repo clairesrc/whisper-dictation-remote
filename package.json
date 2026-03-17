@@ -109,6 +109,50 @@
       ]
     },
     {
+      "name": "transcriptionMethod",
+      "title": "Transcription Method",
+      "description": "Choose between local whisper.cpp or remote OpenAI-compatible API for transcription",
+      "type": "dropdown",
+      "required": false,
+      "default": "remote",
+      "data": [
+        {
+          "title": "Remote API (OpenAI-compatible)",
+          "value": "remote"
+        },
+        {
+          "title": "Local whisper.cpp",
+          "value": "local"
+        }
+      ]
+    },
+    {
+      "name": "remoteTranscriptionEndpoint",
+      "title": "Remote Transcription API Endpoint",
+      "description": "Base URL for the OpenAI-compatible transcription API (e.g. https://api.openai.com or https://litellm.bread.monster)",
+      "type": "textfield",
+      "required": false,
+      "placeholder": "https://litellm.bread.monster",
+      "default": "https://litellm.bread.monster"
+    },
+    {
+      "name": "remoteTranscriptionModel",
+      "title": "Remote Transcription Model",
+      "description": "Model name for remote transcription (e.g. whisper-1, voxtral-mini)",
+      "type": "textfield",
+      "required": false,
+      "placeholder": "voxtral-mini",
+      "default": "voxtral-mini"
+    },
+    {
+      "name": "remoteTranscriptionApiKey",
+      "title": "Remote Transcription API Key",
+      "description": "API key for the remote transcription service. Leave blank if not required.",
+      "type": "password",
+      "required": false,
+      "placeholder": "Enter your API key"
+    },
+    {
       "name": "aiRefinementMethod",
       "title": "AI Refinement Method",
       "description": "Choose which AI service to use for refining transcriptions",
@@ -189,7 +233,9 @@
     }
   ],
   "dependencies": {
-    "@raycast/api": "^1.99.3"
+    "@raycast/api": "^1.99.3",
+    "form-data": "^4.0.0",
+    "node-fetch": "^2.7.0"
   },
   "devDependencies": {
     "@raycast/eslint-config": "^2.0.4",

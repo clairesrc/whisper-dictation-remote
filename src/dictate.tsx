@@ -64,6 +64,12 @@ interface Config {
   soxPath: string;
 }
 
+interface RemoteConfig {
+  endpoint: string;
+  model: string;
+  apiKey: string;
+}
+
 export default function DictateWithAICommand() {
   const [state, setState] = useState<CommandState>("configuring");
   const [transcribedText, setTranscribedText] = useState<string>("");
@@ -74,6 +80,7 @@ export default function DictateWithAICommand() {
   const soxProcessRef = useRef<ChildProcessWithoutNullStreams | null>(null);
   const [waveformSeed, setWaveformSeed] = useState<number>(0);
   const [config, setConfig] = useState<Config | null>(null);
+  const [remoteConfig, setRemoteConfig] = useState<RemoteConfig | null>(null);
 
   const preferences = getPreferenceValues<Preferences>();
   const DEFAULT_ACTION = preferences.defaultAction || "none";
@@ -97,7 +104,7 @@ export default function DictateWithAICommand() {
   }, []);
 
   // Initialize and validate configuration
-  useConfiguration(setState, setConfig, setErrorMessage);
+  useConfiguration(setState, setConfig, setErrorMessage, setRemoteConfig);
 
   const { restartRecording, currentRefinementPrompt, isRefinementActive } = useRecording(
     state,
@@ -290,6 +297,7 @@ export default function DictateWithAICommand() {
   // Use transcription hook
   const { startTranscription, handlePasteAndCopy } = useTranscription({
     config,
+    remoteConfig,
     preferences,
     setState,
     setErrorMessage,

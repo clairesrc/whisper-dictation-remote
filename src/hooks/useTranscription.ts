@@ -13,6 +13,8 @@ import {
   showHUD,
   environment,
 } from "@raycast/api";
+import FormData from "form-data";
+import fetch from "node-fetch";
 
 // Define states
 type CommandState =
@@ -31,11 +33,18 @@ interface Config {
   soxPath: string;
 }
 
+interface RemoteConfig {
+  endpoint: string;
+  model: string;
+  apiKey: string;
+}
+
 const AUDIO_FILE_PATH = path.join(environment.supportPath, "raycast_dictate_audio.wav");
 const WAV_HEADER_SIZE = 44;
 
 interface UseTranscriptionProps {
   config: Config | null;
+  remoteConfig: RemoteConfig | null;
   preferences: Preferences;
   setState: Dispatch<SetStateAction<CommandState>>;
   setErrorMessage: Dispatch<SetStateAction<string>>;
@@ -47,20 +56,11 @@ interface UseTranscriptionProps {
   skipAIForSession: boolean;
 }
 /**
- * Hook that manages audio transcription using Whisper CLI.
- * @param config - Configuration containing paths to required executables and model
- * @param preferences - User preferences for transcription and post-processing
- * @param setState - Function to update the current command state
- * @param setErrorMessage - Function to set error message when transcription fails
- * @param setTranscribedText - Function to update the transcribed text result
- * @param refineText - Function to apply AI refinement to the transcribed text
- * @param saveTranscriptionToHistory - Function to save completed transcription to history
- * @param cleanupAudioFile - Function to remove the temporary audio file
- * @param aiErrorMessage - Error message from AI refinement if it failed
- * @returns Object containing the startTranscription function
+ * Hook that manages audio transcription using local whisper.cpp or remote OpenAI-compatible API.
  */
 export function useTranscription({
   config,
+  remoteConfig,
   preferences,
   setState,
   setErrorMessage,
@@ -161,9 +161,18 @@ export function useTranscription({
   );
 
   const startTranscription = useCallback(async () => {
-    if (!config) {
-      console.error("startTranscription: Configuration not available.");
+    const transcriptionMethod = preferences.transcriptionMethod || "remote";
+    
+    if (transcriptionMethod === "local" && !config) {
+      console.error("startTranscription: Local configuration not available.");
       setErrorMessage("Configuration error occurred before transcription.");
+      setState("error");
+      return;
+    }
+    
+    if (transcriptionMethod === "remote" && !remoteConfig) {
+      console.error("startTranscription: Remote configuration not available.");
+      setErrorMessage("Remote transcription configuration error. Check API endpoint and model settings.");
       setState("error");
       return;
     }
@@ -172,7 +181,6 @@ export function useTranscription({
     showToast({ style: Toast.Style.Animated, title: "Transcribing..." });
     console.log("Set state to transcribing.");
 
-    // Delay to ensure audio file is fully written
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     console.log(`Checking for audio file: ${AUDIO_FILE_PATH}`);
@@ -180,7 +188,6 @@ export function useTranscription({
       const stats = await fs.promises.stat(AUDIO_FILE_PATH);
       console.log(`Audio file stats: ${JSON.stringify(stats)}`);
       if (stats.size <= WAV_HEADER_SIZE) {
-        // WAV header size
         throw new Error(
           `Audio file is empty or too small (size: ${stats.size} bytes). Recording might have failed or captured no sound.`,
         );
@@ -195,11 +202,103 @@ export function useTranscription({
           : `Transcription failed: Cannot access audio file. ${err.message}`;
       setErrorMessage(errorMsg);
       setState("error");
-      cleanupAudioFile(); // Clean up if file check fails
+      cleanupAudioFile();
       return;
     }
 
-    console.log(`Starting transcription with model: ${config.modelPath}`);
+    if (transcriptionMethod === "remote") {
+      await transcribeRemote();
+    } else {
+      await transcribeLocal();
+    }
+  }, [config, remoteConfig, preferences, setState, setErrorMessage, handleTranscriptionResult, cleanupAudioFile]);
+
+  const transcribeRemote = useCallback(async () => {
+    if (!remoteConfig) {
+      setErrorMessage("Remote configuration not available.");
+      setState("error");
+      return;
+    }
+
+    console.log(`Starting remote transcription with model: ${remoteConfig.model} at ${remoteConfig.endpoint}`);
+
+    try {
+      const audioBuffer = await fs.promises.readFile(AUDIO_FILE_PATH);
+      const formData = new FormData();
+      formData.append("file", audioBuffer, {
+        filename: "audio.wav",
+        contentType: "audio/wav",
+      });
+      formData.append("model", remoteConfig.model);
+
+      const endpoint = remoteConfig.endpoint.endsWith("/")
+        ? remoteConfig.endpoint.slice(0, -1)
+        : remoteConfig.endpoint;
+      const url = `${endpoint}/v1/audio/transcriptions`;
+
+      console.log(`Sending transcription request to: ${url}`);
+
+      const headers: Record<string, string> = {};
+      if (formData.getHeaders) {
+        Object.assign(headers, formData.getHeaders());
+      }
+      if (remoteConfig.apiKey) {
+        headers["Authorization"] = `Bearer ${remoteConfig.apiKey}`;
+      }
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: headers,
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMsg = `Remote transcription failed (${response.status}): ${errorText}`;
+        
+        if (response.status === 401) {
+          errorMsg = "Authentication failed. Check your API key.";
+        } else if (response.status === 404) {
+          errorMsg = `Endpoint not found: ${url}. Check the API endpoint URL.`;
+        } else if (response.status === 400) {
+          errorMsg = `Bad request: ${errorText}. The audio format or model may not be supported.`;
+        }
+        
+        throw new Error(errorMsg);
+      }
+
+      const result = (await response.json()) as { text?: string };
+      const transcribedText = result.text?.trim() || "[BLANK_AUDIO]";
+
+      console.log("Remote transcription successful.");
+      console.log("Transcribed text:", transcribedText);
+
+      await handleTranscriptionResult(transcribedText);
+    } catch (error) {
+      console.error("Remote transcription error:", error);
+      const errMsg = error instanceof Error ? error.message : "Unknown error during remote transcription.";
+      setErrorMessage(errMsg);
+      setState("error");
+      cleanupAudioFile();
+
+      await showFailureToast(errMsg, {
+        title: "Remote Transcription Failed",
+        primaryAction: {
+          title: "Open Extension Preferences",
+          onAction: () => openExtensionPreferences(),
+        },
+      });
+    }
+  }, [remoteConfig, handleTranscriptionResult, cleanupAudioFile, setErrorMessage, setState]);
+
+  const transcribeLocal = useCallback(async () => {
+    if (!config) {
+      setErrorMessage("Local configuration not available.");
+      setState("error");
+      return;
+    }
+
+    console.log(`Starting local transcription with model: ${config.modelPath}`);
 
     // Execute whisper-cli
     execFile(
@@ -248,7 +347,7 @@ export function useTranscription({
             },
           });
         } else {
-          console.log("Transcription successful.");
+          console.log("Local transcription successful.");
           const trimmedText = stdout.trim() || "[BLANK_AUDIO]";
           console.log("Transcribed text:", trimmedText);
           // Pass text to handler to set state/save history/refine/etc.
@@ -256,7 +355,7 @@ export function useTranscription({
         }
       },
     );
-  }, [config, setState, setErrorMessage, handleTranscriptionResult, cleanupAudioFile]);
+  }, [config, handleTranscriptionResult, cleanupAudioFile, setErrorMessage, setState]);
 
   return { startTranscription, handlePasteAndCopy };
 }

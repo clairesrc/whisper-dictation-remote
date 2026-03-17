@@ -30,16 +30,17 @@ interface Config {
   soxPath: string;
 }
 
-/**
- * Hook to validate whisper, sox, and model paths and update component state.
- * @param setState - Setter for command state (configuring, idle, error)
- * @param setConfig - Setter for validated Config
- * @param setErrorMessage - Setter for error messages on failure
- */
+interface RemoteConfig {
+  endpoint: string;
+  model: string;
+  apiKey: string;
+}
+
 export function useConfiguration(
   setState: Dispatch<SetStateAction<CommandState>>,
   setConfig: Dispatch<SetStateAction<Config | null>>,
   setErrorMessage: Dispatch<SetStateAction<string>>,
+  setRemoteConfig: Dispatch<SetStateAction<RemoteConfig | null>>,
 ) {
   const preferences = getPreferenceValues<Preferences>();
 
@@ -48,8 +49,8 @@ export function useConfiguration(
 
     async function checkConfiguration() {
       setState("configuring");
+      const transcriptionMethod = preferences.transcriptionMethod || "remote";
 
-      // Validate SoX executable
       const soxPath = preferences.soxExecutablePath;
       if (!soxPath || !fs.existsSync(soxPath)) {
         const errorMsg = `SoX executable not found or not set at '${soxPath || "not set"}'. Please install SoX (e.g., 'brew install sox') and set the correct path in preferences.`;
@@ -65,7 +66,26 @@ export function useConfiguration(
         return;
       }
 
-      // Validate Whisper exec
+      const remoteConfig: RemoteConfig = {
+        endpoint: preferences.remoteTranscriptionEndpoint || "https://litellm.bread.monster",
+        model: preferences.remoteTranscriptionModel || "voxtral-mini",
+        apiKey: preferences.remoteTranscriptionApiKey || "",
+      };
+
+      if (transcriptionMethod === "remote") {
+        if (isMounted) {
+          setRemoteConfig(remoteConfig);
+          setConfig({
+            execPath: "",
+            modelPath: "",
+            soxPath: preferences.soxExecutablePath,
+          });
+          setErrorMessage("");
+          setState("configured_waiting_selection");
+        }
+        return;
+      }
+
       const whisperExec = preferences.whisperExecutable;
       if (!whisperExec || !fs.existsSync(whisperExec)) {
         const errorMsg = `Whisper executable not found at '${whisperExec || "not set"}'.\n\nEnsure whisper.cpp is installed and the path in preferences is correct.\nCommon paths:\n- Homebrew (Apple Silicon): /opt/homebrew/bin/whisper-cli\n- Homebrew (Intel): /usr/local/bin/whisper-cli`;
@@ -81,7 +101,6 @@ export function useConfiguration(
         return;
       }
 
-      // Determine model path (user-specified preferred over downloaded)
       let finalModelPath = "";
       try {
         const downloadedPath = await LocalStorage.getItem<string>(DOWNLOADED_MODEL_PATH_KEY);
@@ -121,6 +140,7 @@ export function useConfiguration(
           modelPath: finalModelPath,
           soxPath: preferences.soxExecutablePath,
         });
+        setRemoteConfig(remoteConfig);
         setErrorMessage("");
         setState("configured_waiting_selection");
       }
@@ -131,5 +151,5 @@ export function useConfiguration(
     return () => {
       isMounted = false;
     };
-  }, [preferences.whisperExecutable, preferences.modelPath, preferences.soxExecutablePath]);
+  }, [preferences.whisperExecutable, preferences.modelPath, preferences.soxExecutablePath, preferences.transcriptionMethod, preferences.remoteTranscriptionEndpoint, preferences.remoteTranscriptionModel, preferences.remoteTranscriptionApiKey]);
 }

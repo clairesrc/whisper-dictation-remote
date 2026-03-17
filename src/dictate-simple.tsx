@@ -50,6 +50,12 @@ interface Config {
   soxPath: string;
 }
 
+interface RemoteConfig {
+  endpoint: string;
+  model: string;
+  apiKey: string;
+}
+
 export default function SimpleDictateCommand() {
   const [state, setState] = useState<CommandState>("configuring");
   const [transcribedText, setTranscribedText] = useState<string>("");
@@ -57,6 +63,7 @@ export default function SimpleDictateCommand() {
   const soxProcessRef = useRef<ChildProcessWithoutNullStreams | null>(null);
   const [waveformSeed, setWaveformSeed] = useState<number>(0);
   const [config, setConfig] = useState<Config | null>(null);
+  const [remoteConfig, setRemoteConfig] = useState<RemoteConfig | null>(null);
 
   const preferences = getPreferenceValues<Preferences>();
   const DEFAULT_ACTION = preferences.defaultAction || "none";
@@ -72,7 +79,7 @@ export default function SimpleDictateCommand() {
       });
   }, []);
 
-  useConfiguration(setState, setConfig, setErrorMessage);
+  useConfiguration(setState, setConfig, setErrorMessage, setRemoteConfig);
 
   const saveTranscriptionToHistory = useCallback(async (text: string) => {
     if (!text || text === "[BLANK_AUDIO]") return;
@@ -121,15 +128,16 @@ export default function SimpleDictateCommand() {
 
   const { startTranscription, handlePasteAndCopy } = useTranscription({
     config,
+    remoteConfig,
     preferences,
     setState,
     setErrorMessage,
     setTranscribedText,
-    refineText: async (text: string) => text, // No AI refinement
+    refineText: async (text: string) => text,
     saveTranscriptionToHistory,
     cleanupAudioFile,
     aiErrorMessage: "",
-    skipAIForSession: true, // Always skip AI for simple dictate
+    skipAIForSession: true,
   });
 
   // Function to stop recording and transcribe
