@@ -59,11 +59,11 @@
     {
       "name": "whisperExecutable",
       "title": "Whisper Executable Path",
-      "description": "Path to whisper-cpp main executable. Default assumes Homebrew on Apple Silicon. Check /usr/local/bin/whisper-cli for Intel.",
+      "description": "Path to whisper-cpp main executable (only needed for local transcription).",
       "type": "textfield",
       "required": true,
-      "placeholder": "/opt/homebrew/bin/whisper-cli",
-      "default": "/opt/homebrew/bin/whisper-cli"
+      "placeholder": "/usr/bin/whisper-cli",
+      "default": "/usr/bin/whisper-cli"
     },
     {
       "name": "modelPath",
@@ -76,11 +76,11 @@
     {
       "name": "soxExecutablePath",
       "title": "SoX Executable Path",
-      "description": "Full path to the 'sox' command-line audio utility. Default assumes Homebrew on Apple Silicon. Check /usr/local/bin/sox for Intel.",
+      "description": "Full path to the 'sox' command-line audio utility.",
       "type": "textfield",
       "required": true,
-      "placeholder": "/opt/homebrew/bin/sox",
-      "default": "/opt/homebrew/bin/sox"
+      "placeholder": "/nix/store/...-sox/bin/sox",
+      "default": "/nix/store/...-sox/bin/sox"
     },
     {
       "name": "defaultAction",
@@ -88,7 +88,7 @@
       "description": "Action to perform automatically after transcription completes",
       "type": "dropdown",
       "required": false,
-      "default": "none",
+      "default": "paste",
       "data": [
         {
           "title": "None (Show Options)",
@@ -141,8 +141,8 @@
       "description": "Model name for remote transcription (e.g. whisper-1, voxtral-mini)",
       "type": "textfield",
       "required": false,
-      "placeholder": "voxtral-mini",
-      "default": "voxtral-mini"
+      "placeholder": "parakeet-transcription",
+      "default": "parakeet-transcription"
     },
     {
       "name": "remoteTranscriptionApiKey",
@@ -158,7 +158,7 @@
       "description": "Choose which AI service to use for refining transcriptions",
       "type": "dropdown",
       "required": false,
-      "default": "disabled",
+      "default": "ollama",
       "data": [
         {
           "title": "Disabled",
@@ -180,7 +180,7 @@
       "description": "When enabled, you'll be asked to select an AI refinement prompt before each dictation session (only when AI refinement is enabled)",
       "type": "checkbox",
       "required": false,
-      "default": false,
+      "default": true,
       "label": "Ask for a prompt every time"
     },
     {
@@ -211,8 +211,8 @@
       "description": "URL of your Ollama server or OpenAI compatible API (v1)",
       "type": "textfield",
       "required": false,
-      "placeholder": "http://localhost:11434",
-      "default": "http://localhost:11434"
+      "placeholder": "https://litellm.bread.monster/v1",
+      "default": "https://litellm.bread.monster/v1"
     },
     {
       "name": "ollamaApiKey",
@@ -228,8 +228,8 @@
       "description": "Name of the model to use with Ollama/External API (e.g. llama3.2:latest, gpt-4o-mini, claude-3-5-haiku-latest)",
       "type": "textfield",
       "required": false,
-      "placeholder": "llama3.2:latest",
-      "default": "llama3.2:latest"
+      "placeholder": "qwen3.5-35b-a3b-thinking-general",
+      "default": "qwen3.5-35b-a3b-thinking-general"
     }
   ],
   "dependencies": {
