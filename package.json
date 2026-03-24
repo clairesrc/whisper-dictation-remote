@@ -169,7 +169,7 @@
           "value": "raycast"
         },
         {
-          "title": "Ollama/External API",
+          "title": "OpenAI-compatible API",
           "value": "ollama"
         }
       ]
@@ -207,12 +207,12 @@
     },
     {
       "name": "ollamaEndpoint",
-      "title": "Ollama/API Endpoint",
-      "description": "URL of your Ollama server or OpenAI compatible API (v1)",
+      "title": "API Endpoint (OpenAI-compatible)",
+      "description": "Base URL of your OpenAI-compatible API (e.g. https://litellm.bread.monster). The /v1/chat/completions path is appended automatically.",
       "type": "textfield",
       "required": false,
-      "placeholder": "https://litellm.bread.monster/v1",
-      "default": "https://litellm.bread.monster/v1"
+      "placeholder": "https://litellm.bread.monster",
+      "default": "https://litellm.bread.monster"
     },
     {
       "name": "ollamaApiKey",
@@ -225,7 +225,7 @@
     {
       "name": "ollamaModel",
       "title": "Model",
-      "description": "Name of the model to use with Ollama/External API (e.g. llama3.2:latest, gpt-4o-mini, claude-3-5-haiku-latest)",
+      "description": "Model name for AI refinement (e.g. gpt-4o-mini, qwen3.5-35b-a3b-thinking-general, claude-3-5-haiku-latest)",
       "type": "textfield",
       "required": false,
       "placeholder": "qwen3.5-35b-a3b-thinking-general",
