@@ -228,8 +228,8 @@
       "description": "Model name for AI refinement (e.g. gpt-4o-mini, qwen3.5-35b-a3b-thinking-general, claude-3-5-haiku-latest)",
       "type": "textfield",
       "required": false,
-      "placeholder": "qwen3.5-35b-a3b-thinking-general",
-      "default": "qwen3.5-35b-a3b-thinking-general"
+      "placeholder": "qwen3.5-35b-a3b-instruct-general",
+      "default": "qwen3.5-35b-a3b-instruct-general"
     }
   ],
   "dependencies": {
