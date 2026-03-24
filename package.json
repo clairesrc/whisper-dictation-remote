@@ -79,8 +79,8 @@
       "description": "Full path to the 'sox' command-line audio utility.",
       "type": "textfield",
       "required": true,
-      "placeholder": "/nix/store/...-sox/bin/sox",
-      "default": "/nix/store/...-sox/bin/sox"
+      "placeholder": "/home/bread/.local/share/vicinae/bin/sox",
+      "default": "/home/bread/.local/share/vicinae/bin/sox"
     },
     {
       "name": "defaultAction",
